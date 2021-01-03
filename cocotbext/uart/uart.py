@@ -113,6 +113,9 @@ class UartSource:
     def idle(self):
         return self.empty() and not self.active
 
+    def clear(self):
+        self.queue.clear()
+
     async def wait(self):
         await self._idle.wait()
 
@@ -234,6 +237,9 @@ class UartSink:
 
     def idle(self):
         return not self.active
+
+    def clear(self):
+        self.queue.clear()
 
     async def wait(self, timeout=0, timeout_unit='ns'):
         if not self.empty():
