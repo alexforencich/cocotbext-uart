@@ -23,9 +23,9 @@ THE SOFTWARE.
 """
 
 import logging
-from collections import deque
 
 import cocotb
+from cocotb.queue import Queue
 from cocotb.triggers import FallingEdge, Timer, First, Event
 
 from .version import __version__
@@ -47,8 +47,7 @@ class UartSource:
         super().__init__(*args, **kwargs)
 
         self.active = False
-        self.queue = deque()
-        self.sync = Event()
+        self.queue = Queue()
 
         self._idle = Event()
         self._idle.set()
@@ -96,25 +95,27 @@ class UartSource:
         self._restart()
 
     async def write(self, data):
-        self.write_nowait(data)
+        for b in data:
+            await self.queue.put(int(b))
+            self._idle.clear()
 
     def write_nowait(self, data):
         for b in data:
-            self.queue.append(int(b))
-        self.sync.set()
+            self.queue.put_nowait(int(b))
         self._idle.clear()
 
     def count(self):
-        return len(self.queue)
+        return self.queue.qsize()
 
     def empty(self):
-        return not self.queue
+        return self.queue.empty()
 
     def idle(self):
         return self.empty() and not self.active
 
     def clear(self):
-        self.queue.clear()
+        while not self.queue.empty():
+            frame = self.queue.get_nowait()
 
     async def wait(self):
         await self._idle.wait()
@@ -126,13 +127,11 @@ class UartSource:
         stop_bit_t = Timer(int(1e9/self.baud*stop_bits), 'ns')
 
         while True:
-            while not self.queue:
+            if self.empty():
                 self.active = False
                 self._idle.set()
-                self.sync.clear()
-                await self.sync.wait()
 
-            b = self.queue.popleft()
+            b = await self.queue.get()
             self.active = True
 
             self.log.info("Write byte 0x%02x", b)
@@ -169,7 +168,7 @@ class UartSink:
         super().__init__(*args, **kwargs)
 
         self.active = False
-        self.queue = deque()
+        self.queue = Queue()
         self.sync = Event()
 
         self.log.info("UART sink configuration:")
@@ -220,26 +219,27 @@ class UartSink:
 
     def read_nowait(self, count=-1):
         if count < 0:
-            count = len(self.queue)
+            count = self.queue.qsize()
         if self.bits == 8:
             data = bytearray()
         else:
             data = []
         for k in range(count):
-            data.append(self.queue.popleft())
+            data.append(self.queue.get_nowait())
         return data
 
     def count(self):
-        return len(self.queue)
+        return self.queue.qsize()
 
     def empty(self):
-        return not self.queue
+        return self.queue.empty()
 
     def idle(self):
         return not self.active
 
     def clear(self):
-        self.queue.clear()
+        while not self.queue.empty():
+            frame = self.queue.get_nowait()
 
     async def wait(self, timeout=0, timeout_unit='ns'):
         if not self.empty():
@@ -276,7 +276,7 @@ class UartSink:
 
             self.log.info("Read byte 0x%02x", b)
 
-            self.queue.append(b)
+            self.queue.put_nowait(b)
             self.sync.set()
 
             self.active = False
