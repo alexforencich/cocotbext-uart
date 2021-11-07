@@ -137,17 +137,17 @@ class UartSource:
             self.log.info("Write byte 0x%02x", b)
 
             # start bit
-            data <= 0
+            data.value = 0
             await bit_t
 
             # data bits
             for k in range(self.bits):
-                data <= b & 1
+                data.value = b & 1
                 b >>= 1
                 await bit_t
 
             # stop bit
-            data <= 1
+            data.value = 1
             await stop_bit_t
 
 
