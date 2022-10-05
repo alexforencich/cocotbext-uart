@@ -37,19 +37,19 @@ from cocotbext.uart import UartSource, UartSink
 
 
 class TB:
-    def __init__(self, dut):
+    def __init__(self, dut, glitch_generator):
         self.dut = dut
 
         self.log = logging.getLogger("cocotb.tb")
         self.log.setLevel(logging.DEBUG)
 
-        self.source = UartSource(dut.data, baud=115200)
+        self.source = UartSource(dut.data, baud=115200, glitch_generator=glitch_generator)
         self.sink = UartSink(dut.data, baud=115200)
 
 
-async def run_test(dut, payload_lengths=None, payload_data=None):
+async def run_test(dut, payload_lengths=None, payload_data=None, glitch_generator=None):
 
-    tb = TB(dut)
+    tb = TB(dut, glitch_generator)
 
     await Timer(10, 'us')
 
@@ -68,6 +68,9 @@ async def run_test(dut, payload_lengths=None, payload_data=None):
 
         await Timer(100, 'us')
 
+@cocotb.test(expect_fail=True)
+async def run_glitch_test(dut):
+    await run_test(dut,size_list,incrementing_payload,glitch_gen)
 
 def prbs31(state=0x7fffffff):
     while True:
@@ -78,6 +81,17 @@ def prbs31(state=0x7fffffff):
                 state = (state & 0x3fffffff) << 1
         yield state & 0xff
 
+def glitch_gen():
+    mask_size = 10
+    rand_gen = prbs31()
+    while True:
+        rand1 = next(rand_gen)
+        rand2 = next(rand_gen)
+        mask = None
+        if rand1 > 220:
+            t = int(10*(rand2/255))
+            mask = [1 if i == t else 0 for i in range(mask_size)]
+        yield mask
 
 def size_list():
     return list(range(1, 16)) + [128]
