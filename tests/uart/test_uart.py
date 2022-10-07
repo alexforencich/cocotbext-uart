@@ -87,7 +87,7 @@ def glitch_gen():
     while True:
         rand1 = next(rand_gen)
         rand2 = next(rand_gen)
-        mask = None
+        mask = [0]*mask_size
         if rand1 > 220:
             t = int(10*(rand2/255))
             mask = [1 if i == t else 0 for i in range(mask_size)]

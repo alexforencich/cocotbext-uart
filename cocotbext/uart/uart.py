@@ -126,7 +126,7 @@ class UartSource:
     async def add_glitch(self, data, time, unit):
         if self._glitch_generator is not None:
             mask = next(self._glitch_generator)
-            if mask is not None:
+            if any(mask):
                 bit_val = data.value.integer
                 for k in mask:
                     if bit_val == 1:
