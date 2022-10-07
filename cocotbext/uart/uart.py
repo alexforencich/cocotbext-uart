@@ -230,10 +230,17 @@ class UartSink:
         self._restart()
 
     async def read(self, count=-1):
-        while self.empty():
-            self.sync.clear()
-            await self.sync.wait()
-        return self.read_nowait(count)
+        if count < 0:
+            count = self.queue.qsize()
+            if count == 0:
+                count = 1
+        if self.bits == 8:
+            data = bytearray()
+        else:
+            data = []
+        for k in range(count):
+            data.append(await self.queue.get())
+        return data
 
     def read_nowait(self, count=-1):
         if count < 0:
