@@ -43,8 +43,12 @@ class TB:
         self.log = logging.getLogger("cocotb.tb")
         self.log.setLevel(logging.DEBUG)
 
+        enable_check_bits = False
+        if glitch_generator is not None:
+            enable_check_bits = True
+
         self.source = UartSource(dut.data, baud=115200, glitch_generator=glitch_generator)
-        self.sink = UartSink(dut.data, baud=115200)
+        self.sink = UartSink(dut.data, baud=115200, enable_check_bits=enable_check_bits)
 
 
 async def run_test(dut, payload_lengths=None, payload_data=None, glitch_generator=None):

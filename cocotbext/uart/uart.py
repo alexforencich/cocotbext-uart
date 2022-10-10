@@ -171,12 +171,15 @@ class UartSource:
 
 class UartSink:
 
-    def __init__(self, data, baud=9600, bits=8, stop_bits=1, *args, **kwargs):
+    def __init__(self, data, baud=9600, bits=8, stop_bits=1, enable_check_bits=False, check_bits_window=0.01, *args, **kwargs):
         self.log = logging.getLogger(f"cocotb.{data._path}")
         self._data = data
         self._baud = baud
         self._bits = bits
         self._stop_bits = stop_bits
+
+        self.enable_check_bits = enable_check_bits
+        self.check_bits_window = check_bits_window
 
         self.log.info("UART sink")
         self.log.info("cocotbext-uart version %s", __version__)
@@ -280,7 +283,7 @@ class UartSink:
         assert False, "Unexpected transition"
 
     async def check_bits(self, period, units, signal, bits):
-        window = int(period*0.01)
+        window = int(period*self.check_bits_window)
         for l in range(bits):
             await Timer(window,units)
             check_coro = cocotb.start_soon(self.assert_hold(signal))
@@ -298,7 +301,8 @@ class UartSink:
         while True:
             await FallingEdge(data)
 
-            cocotb.start_soon(self.check_bits(int(1e9/self.baud), 'ns', data, bits+1+stop_bits))
+            if self.enable_check_bits:
+                cocotb.start_soon(self.check_bits(int(1e9/self.baud), 'ns', data, bits+1+stop_bits))
 
             self.active = True
 
