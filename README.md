@@ -42,13 +42,13 @@ To use these modules, import the one you need and connect it to the DUT:
 
 To send data into a design with a `UartSource`, call `write()` or `write_nowait()`.  Accepted data types are iterables of ints, including lists, bytes, bytearrays, etc.  Optionally, call `wait()` to wait for the transmit operation to complete.  Example:
 
-    await uart_source.send(b'test data')
+    await uart_source.write(b'test data')
     # wait for operation to complete (optional)
     await uart_source.wait()
 
 To receive data with a `UartSink`, call `read()` or `read_nowait()`.  Optionally call `wait()` to wait for new receive data.  `read()` will block until at least 1 data byte is available.  Both `read()` and `read_nowait()` will return up to _count_ bytes from the receive queue, or the entire contents of the receive queue if not specified.
 
-    data = await uart_sink.recv()
+    data = await uart_sink.read()
 
 #### Constructor parameters:
 
