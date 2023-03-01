@@ -214,6 +214,7 @@ class UartSink:
         self._baud = baud
         self._bits = bits
         self._stop_bits = stop_bits
+        self._parity = parity
 
         super().__init__(*args, **kwargs)
 
