@@ -65,7 +65,7 @@ class UartSource:
     def _restart(self):
         if self._run_cr is not None:
             self._run_cr.kill()
-        self._run_cr = cocotb.fork(self._run(self._data, self._baud, self._bits, self._stop_bits))
+        self._run_cr = cocotb.start_soon(self._run(self._data, self._baud, self._bits, self._stop_bits))
 
     @property
     def baud(self):
@@ -182,7 +182,7 @@ class UartSink:
     def _restart(self):
         if self._run_cr is not None:
             self._run_cr.kill()
-        self._run_cr = cocotb.fork(self._run(self._data, self._baud, self._bits, self._stop_bits))
+        self._run_cr = cocotb.start_soon(self._run(self._data, self._baud, self._bits, self._stop_bits))
 
     @property
     def baud(self):
