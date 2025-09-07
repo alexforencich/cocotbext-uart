@@ -1,6 +1,6 @@
 """
 
-Copyright (c) 2020 Alex Forencich
+Copyright (c) 2020-2025 Alex Forencich
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -41,7 +41,7 @@ class UartSource:
 
         self.log.info("UART source")
         self.log.info("cocotbext-uart version %s", __version__)
-        self.log.info("Copyright (c) 2020 Alex Forencich")
+        self.log.info("Copyright (c) 2020-2025 Alex Forencich")
         self.log.info("https://github.com/alexforencich/cocotbext-uart")
 
         super().__init__(*args, **kwargs)
@@ -162,7 +162,7 @@ class UartSink:
 
         self.log.info("UART sink")
         self.log.info("cocotbext-uart version %s", __version__)
-        self.log.info("Copyright (c) 2020 Alex Forencich")
+        self.log.info("Copyright (c) 2020-2025 Alex Forencich")
         self.log.info("https://github.com/alexforencich/cocotbext-uart")
 
         super().__init__(*args, **kwargs)
