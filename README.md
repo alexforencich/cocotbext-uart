@@ -1,6 +1,6 @@
 # UART interface modules for Cocotb
 
-[![Build Status](https://github.com/alexforencich/cocotbext-uart/workflows/Regression%20Tests/badge.svg?branch=master)](https://github.com/alexforencich/cocotbext-uart/actions/)
+[![Regression Tests](https://github.com/alexforencich/cocotbext-uart/actions/workflows/regression-tests.yml/badge.svg)](https://github.com/alexforencich/cocotbext-uart/actions/workflows/regression-tests.yml)
 [![codecov](https://codecov.io/gh/alexforencich/cocotbext-uart/branch/master/graph/badge.svg)](https://codecov.io/gh/alexforencich/cocotbext-uart)
 [![PyPI version](https://badge.fury.io/py/cocotbext-uart.svg)](https://pypi.org/project/cocotbext-uart)
 
