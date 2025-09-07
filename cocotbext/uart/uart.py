@@ -115,7 +115,7 @@ class UartSource:
 
     def clear(self):
         while not self.queue.empty():
-            frame = self.queue.get_nowait()
+            _ = self.queue.get_nowait()
 
     async def wait(self):
         await self._idle.wait()
@@ -239,7 +239,7 @@ class UartSink:
 
     def clear(self):
         while not self.queue.empty():
-            frame = self.queue.get_nowait()
+            _ = self.queue.get_nowait()
 
     async def wait(self, timeout=0, timeout_unit='ns'):
         if not self.empty():
@@ -269,7 +269,7 @@ class UartSink:
             b = 0
             for k in range(bits):
                 await bit_t
-                b |= bool(data.value.integer) << k
+                b |= bool(int(data.value)) << k
 
             # stop bit
             await stop_bit_t
