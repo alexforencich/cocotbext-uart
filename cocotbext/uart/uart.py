@@ -26,18 +26,21 @@ import logging
 
 import cocotb
 from cocotb.queue import Queue
-from cocotb.triggers import FallingEdge, Timer, First, Event
+from cocotb.triggers import Edge, FallingEdge, Timer, First, Event
 
 from .version import __version__
 
 
 class UartSource:
-    def __init__(self, data, baud=9600, bits=8, stop_bits=1, *args, **kwargs):
+    def __init__(self, data, baud=9600, bits=8, stop_bits=1, glitch_generator=None, *args, **kwargs):
         self.log = logging.getLogger(f"cocotb.{data._path}")
         self._data = data
         self._baud = baud
         self._bits = bits
         self._stop_bits = stop_bits
+        self._glitch_generator = None
+        if glitch_generator is not None:
+            self._glitch_generator = glitch_generator()
 
         self.log.info("UART source")
         self.log.info("cocotbext-uart version %s", __version__)
@@ -120,11 +123,25 @@ class UartSource:
     async def wait(self):
         await self._idle.wait()
 
+    async def add_glitch(self, data, time, unit):
+        if self._glitch_generator is not None:
+            mask = next(self._glitch_generator)
+            if any(mask):
+                bit_val = data.value.integer
+                for k in mask:
+                    if bit_val == 1:
+                        k = 1 if k == 0 else 0
+                    data.value = k
+                    await Timer(int(time/len(mask)),unit)
+
+    async def wait_bit(self, data, time, unit):
+        cocotb.start_soon(self.add_glitch(data,time,unit))
+        await Timer(time, unit)
+
     async def _run(self, data, baud, bits, stop_bits):
         self.active = False
 
-        bit_t = Timer(int(1e9/self.baud), 'ns')
-        stop_bit_t = Timer(int(1e9/self.baud*stop_bits), 'ns')
+        bit_t = lambda: self.wait_bit(data, int(1e9/self.baud), 'ns')
 
         while True:
             if self.empty():
@@ -138,27 +155,31 @@ class UartSource:
 
             # start bit
             data.value = 0
-            await bit_t
+            await bit_t()
 
             # data bits
             for k in range(self.bits):
                 data.value = b & 1
                 b >>= 1
-                await bit_t
+                await bit_t()
 
             # stop bit
             data.value = 1
-            await stop_bit_t
+            for _ in range(self.stop_bits):
+                await bit_t()
 
 
 class UartSink:
 
-    def __init__(self, data, baud=9600, bits=8, stop_bits=1, *args, **kwargs):
+    def __init__(self, data, baud=9600, bits=8, stop_bits=1, enable_check_bits=False, check_bits_window=0.01, *args, **kwargs):
         self.log = logging.getLogger(f"cocotb.{data._path}")
         self._data = data
         self._baud = baud
         self._bits = bits
         self._stop_bits = stop_bits
+
+        self.enable_check_bits = enable_check_bits
+        self.check_bits_window = check_bits_window
 
         self.log.info("UART sink")
         self.log.info("cocotbext-uart version %s", __version__)
@@ -212,10 +233,17 @@ class UartSink:
         self._restart()
 
     async def read(self, count=-1):
-        while self.empty():
-            self.sync.clear()
-            await self.sync.wait()
-        return self.read_nowait(count)
+        if count < 0:
+            count = self.queue.qsize()
+            if count == 0:
+                count = 1
+        if self.bits == 8:
+            data = bytearray()
+        else:
+            data = []
+        for k in range(count):
+            data.append(await self.queue.get())
+        return data
 
     def read_nowait(self, count=-1):
         if count < 0:
@@ -250,6 +278,19 @@ class UartSink:
         else:
             await self.sync.wait()
 
+    async def assert_hold(self, signal):
+        await Edge(signal)
+        assert False, "Unexpected transition"
+
+    async def check_bits(self, period, units, signal, bits):
+        window = int(period*self.check_bits_window)
+        for l in range(bits):
+            await Timer(window,units)
+            check_coro = cocotb.start_soon(self.assert_hold(signal))
+            await Timer(period-(2*window),units)
+            check_coro.kill()
+            await Timer(window,units)
+
     async def _run(self, data, baud, bits, stop_bits):
         self.active = False
 
@@ -259,6 +300,9 @@ class UartSink:
 
         while True:
             await FallingEdge(data)
+
+            if self.enable_check_bits:
+                cocotb.start_soon(self.check_bits(int(1e9/self.baud), 'ns', data, bits+1+stop_bits))
 
             self.active = True
 
