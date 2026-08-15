@@ -31,7 +31,6 @@ import cocotb_test.simulator
 
 import cocotb
 from cocotb.triggers import Timer
-from cocotb.regression import TestFactory
 
 from cocotbext.uart import UartSource, UartSink
 
@@ -45,28 +44,6 @@ class TB:
 
         self.source = UartSource(dut.data, baud=115200)
         self.sink = UartSink(dut.data, baud=115200)
-
-
-async def run_test(dut, payload_lengths=None, payload_data=None):
-
-    tb = TB(dut)
-
-    await Timer(10, 'us')
-
-    for test_data in [payload_data(x) for x in payload_lengths()]:
-
-        await tb.source.write(test_data)
-
-        rx_data = bytearray()
-
-        while len(rx_data) < len(test_data):
-            rx_data.extend(await tb.sink.read())
-
-        tb.log.info("Read data: %s", rx_data)
-
-        assert tb.sink.empty()
-
-        await Timer(100, 'us')
 
 
 def prbs31(state=0x7fffffff):
@@ -92,12 +69,31 @@ def prbs_payload(length):
     return bytearray([next(gen) for x in range(length)])
 
 
-if getattr(cocotb, 'top', None) is not None:
+@cocotb.test()
+@cocotb.parametrize(
+    ("payload_lengths", [size_list]),
+    ("payload_data", [incrementing_payload, prbs_payload]),
+)
+async def run_test(dut, payload_lengths=None, payload_data=None):
 
-    factory = TestFactory(run_test)
-    factory.add_option("payload_lengths", [size_list])
-    factory.add_option("payload_data", [incrementing_payload, prbs_payload])
-    factory.generate_tests()
+    tb = TB(dut)
+
+    await Timer(10, 'us')
+
+    for test_data in [payload_data(x) for x in payload_lengths()]:
+
+        await tb.source.write(test_data)
+
+        rx_data = bytearray()
+
+        while len(rx_data) < len(test_data):
+            rx_data.extend(await tb.sink.read())
+
+        tb.log.info("Read data: %s", rx_data)
+
+        assert tb.sink.empty()
+
+        await Timer(100, 'us')
 
 
 # cocotb-test
